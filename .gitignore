@@ -5,11 +5,9 @@ node_modules
 cache
 artifacts
 #Mac files
-.DS_Store
 #Project files and folders
 output
 coverage.json
 #Npm
-package-lock.json
 # Typescript
 build

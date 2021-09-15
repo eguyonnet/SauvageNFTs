@@ -4,7 +4,14 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "watch": "hardhat watch compilation",
+    "build": "hardhat compile",
+    "test": "hardhat test",
+    "clean": "hardhat clean",
+    "coverage": "hardhat coverage",
+    "deploy:local": "hardhat run scripts/deploy.js",
+    "deploy:ropsten": "hardhat run --network ropsten scripts/deploy.js",
+    "deploy:rinkeby": "hardhat run --network rinkeby scripts/deploy.js"
   },
   "keywords": [],
   "author": "",
@@ -26,9 +33,15 @@
     "ethers": "^5.4.6",
     "hardhat": "^2.6.4",
     "hardhat-gas-reporter": "^1.0.4",
+    "hardhat-log-remover": "^2.0.2",
+    "hardhat-preprocessor": "^0.1.4",
+    "hardhat-watcher": "^2.1.1",
     "prettier": "^2.4.0",
     "prettier-plugin-solidity": "^1.0.0-beta.18",
     "solhint": "^3.3.6",
     "solidity-coverage": "^0.7.17"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.3.2"
   }
 }
