@@ -42,10 +42,10 @@ describe("SauvageOne contract", function () {
 
   describe("Transactions", function () {
 
-    it("Shoulf fail when a new token is minted above maxSupply", async function () {
+    it("Should fail when a new token is minted above maxSupply", async function () {
       await expect(
         hardhatToken.claim(tokenMaxSupply)
-      ).to.be.revertedWith("Token ID invalid");
+      ).to.be.revertedWith("Invalid token Id");
     });
 
     it("When a new token is minted within maxSupply, totalSupply should increase by 1", async function () {
@@ -53,7 +53,7 @@ describe("SauvageOne contract", function () {
       await claimTx.wait();
       expect(await hardhatToken.totalSupply()).to.equal(1);
       // force log
-      await hardhatToken.tokenURI(1);
+      await hardhatToken.tokenURI(0);
     });
 
   });

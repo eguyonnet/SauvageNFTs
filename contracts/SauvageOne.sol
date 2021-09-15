@@ -10,18 +10,16 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract SauvageOne is ERC721Enumerable, ReentrancyGuard, Ownable {
 
-
     // Maximum number of token mintable
-    uint256 private _max;
+    uint256 private _maxSupply;
 
-    constructor(string memory name_, string memory symbol_, uint256 max_) ERC721(name_, symbol_) Ownable() {
-        _max = max_;
-        //console.log("Initializing with name '%s' symbol '%s' and maxtotalSupply '%s'", name_, symbol_, max_);
+    constructor(string memory name_, string memory symbol_, uint256 maxSupply_) ERC721(name_, symbol_) Ownable() {
+        _maxSupply = maxSupply_;
+        //console.log("Initializing with name '%s' symbol '%s' and maxtotalSupply '%s'", name_, symbol_, maxSupply_);
     }
 
     function claim(uint256 tokenId_) public nonReentrant {
-        require(tokenId_ >= 0 && tokenId_ < _max, "Token ID invalid");
-        // TODO pas de vérification token already claimed ? require(_owners[tokenId_] == address(0), "Token already claimed");
+        require(tokenId_ >= 0 && tokenId_ < _maxSupply, "Invalid token Id");
         _safeMint(_msgSender(), tokenId_);
     }
 
@@ -37,56 +35,28 @@ contract SauvageOne is ERC721Enumerable, ReentrancyGuard, Ownable {
     }*/
 
     function tokenURI(uint256 tokenId_) override public view returns (string memory) {
-        //require(_exists(tokenId_), "ERC721Metadata: URI query for nonexistent token");
+        require(_exists(tokenId_), "ERC721Metadata: URI query for nonexistent token");
 
         //string memory baseURI = _baseURI();
-        //return bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI, tokenId.toString())) : "";
+        //return bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI, tokenId_)) : "";
         
         // uniquement si token owner ou authorized or contract owner
         // if (_msgSender() == ownerOf(tokenId_) || _msgSender() == owner())
 
         // ownerOf(tokenId_) ou _isApprovedOrOwner(tokenId_)
 
-        string[5] memory content;
-        content[0] = '<svg xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMinYMin meet" viewBox="0 0 100 200"><style>.base { fill: white; font-family: serif; font-size: 14px; }</style><rect width="100%" height="100%" fill="black" />';
-        content[1] = '<text x="10" y="20" class="base">';
-        content[2] = toString(tokenId_);
-        content[4] = '</text></svg>';
-        string memory output = string(abi.encodePacked(content[0], content[1], content[2], content[3], content[4]));
+        bytes memory svg = '<svg xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMinYMin meet" viewBox="0 0 100 200"><style>.base { fill: white; font-family: serif; font-size: 14px; }</style><rect width="100%" height="100%" fill="black" />';
+        svg = abi.encodePacked(svg, '<text x="10" y="20" class="base">', tokenId_, '</text></svg>');
+        bytes memory json = encode(abi.encodePacked('{"name": "Piece #', tokenId_, '", "description": "Best NFT collection ever", "image": "data:image/svg+xml;base64,', encode(svg), '"}'));
         
-        string memory json = encode(bytes(string(abi.encodePacked('{"name": "Piece #', toString(tokenId_), '", "description": "Best NFT collection ever", "image": "data:image/svg+xml;base64,', encode(bytes(output)), '"}'))));
-        output = string(abi.encodePacked('data:application/json;base64,', json));
-        console.log(output);
-        return output;
+        return string(abi.encodePacked('data:application/json;base64,', json));
     }
 
     function maxSupply() public view virtual returns (uint256) {
-        return _max;
+        return _maxSupply;
     }
 
-    function toString(uint256 value) internal pure returns (string memory) {
-        // Inspired by OraclizeAPI's implementation - MIT license
-        // https://github.com/oraclize/ethereum-api/blob/b42146b063c7d6ee1358846c198246239e9360e8/oraclizeAPI_0.4.25.sol
-
-        if (value == 0) {
-            return "0";
-        }
-        uint256 temp = value;
-        uint256 digits;
-        while (temp != 0) {
-            digits++;
-            temp /= 10;
-        }
-        bytes memory buffer = new bytes(digits);
-        while (value != 0) {
-            digits -= 1;
-            buffer[digits] = bytes1(uint8(48 + uint256(value % 10)));
-            value /= 10;
-        }
-        return string(buffer);
-    }
-
-    function encode(bytes memory data) internal pure returns (string memory) {
+    function encode(bytes memory data) internal pure returns (bytes memory) {
         uint256 len = data.length;
         if (len == 0) return "";
 
@@ -135,7 +105,7 @@ contract SauvageOne is ERC721Enumerable, ReentrancyGuard, Ownable {
             mstore(result, encodedLen)
         }
 
-        return string(result);
+        return result; //string(result);
     }
 
 }
