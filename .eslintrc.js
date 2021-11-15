@@ -27,4 +27,13 @@ module.exports = {
       rules: { "node/no-unpublished-require": "off" },
     },
   ],
+  rules: {
+    "prettier/prettier": 0
+  }
+  /* "prettier/prettier": [
+    "error",
+    {
+      "endOfLine": "auto"
+    },
+  ], */
 };

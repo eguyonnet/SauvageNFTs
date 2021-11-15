@@ -1,5 +1,4 @@
 require("dotenv").config();
-
 require("@nomiclabs/hardhat-etherscan");
 require("@nomiclabs/hardhat-waffle");
 require("hardhat-gas-reporter");
@@ -7,12 +6,14 @@ require("solidity-coverage");
 require("hardhat-watcher");
 require("hardhat-log-remover");
 
+const { ethers } = require("hardhat");
+
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
 task("accounts", "Prints the list of accounts", async () => {
   const accounts = await ethers.getSigners();
   for (const account of accounts) {
-    console.log(account.address + ' - ' + account.balance);
+    console.log(account.address + " - " + account.balance);
   }
 });
 
@@ -52,15 +53,18 @@ module.exports = {
     },
     rinkeby: {
       url: process.env.RINKEBY_URL || "",
-      accounts: process.env.RINKEBY_PRIVATE_KEY !== undefined ? [process.env.RINKEBY_PRIVATE_KEY] : [],
-    }
+      accounts:
+        process.env.RINKEBY_PRIVATE_KEY !== undefined
+          ? [process.env.RINKEBY_PRIVATE_KEY]
+          : [],
+    },
   },
   // https://hardhat.org/plugins/hardhat-gas-reporter.html
   gasReporter: {
-    enabled: (process.env.REPORT_GAS) ? true : false,
+    enabled: process.env.REPORT_GAS,
     currency: "EUR",
     coinmarketcap: process.env.COINMARKETCAP_KEY,
-    //gasPrice : 21
+    // gasPrice : 21
   },
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY,
