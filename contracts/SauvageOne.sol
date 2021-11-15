@@ -61,8 +61,8 @@ contract SauvageOne is ERC721Enumerable, ReentrancyGuard, Ownable {
         //console.log("Initializing with name '%s' symbol '%s' and maxtotalSupply '%s'", name_, symbol_, maxSupply_);
     }
 
+    // Called when msg.value > 0 with empty msg.data
     receive() external payable {
-        require(msg.value >= 0, "Invalid value"); 
         emit DepositReceived(msg.sender, msg.value);
     }
 
@@ -86,24 +86,28 @@ contract SauvageOne is ERC721Enumerable, ReentrancyGuard, Ownable {
 
         uint256 currentTokenId = _incrTokenId.current();
 
-        if (nbrOfTokenRequested_ > 1) {
-            // check number of tokens allowed (takes into account what the user already owns - he could by in between...)
-            if (_msgSender() != owner() && (balanceOf(_msgSender()) + nbrOfTokenRequested_) > _maxNbrTokenClaimable) {
-                revert("Too many tokens claimed");
-            }
-            // Check if enought tokens left
-            if (maxSupply - currentTokenId < nbrOfTokenRequested_) {
-                revert("Not enough tokens left");
-            }
+        // check number of tokens allowed (takes into account what the user already owns - he could buy in between...)
+        if (_msgSender() != owner() && (balanceOf(_msgSender()) + nbrOfTokenRequested_) > _maxNbrTokenClaimable) {
+            revert("Too many tokens claimed");
+        }
+        // Check if enought tokens left
+        if (currentTokenId + nbrOfTokenRequested_ > maxSupply) {
+            revert("Not enough tokens left");
+        }
+        // If case not more supply, end sale
+        if (currentTokenId + nbrOfTokenRequested_ == maxSupply) {
+            currentPeriod = Period.AFTERSALE;
+            emit SaleEnded();
         }
 
+        // Check if enough value ** TODO check if = for gas
         if (_msgSender() != owner() && pricePerToken > 0) {
-            // TODO check if = for gas
             require(pricePerToken * nbrOfTokenRequested_ <= msg.value, "Ether value sent is not enough");
         }
 
+        // Whitelist allows one buy only
         if (_presaleWhiteList[_msgSender()]) {
-            _presaleWhiteList[_msgSender()] = false; // whitelist allows one buy only
+            _presaleWhiteList[_msgSender()] = false;
         }
 
         for (uint i = 0; i < nbrOfTokenRequested_; i++) {
@@ -111,11 +115,6 @@ contract SauvageOne is ERC721Enumerable, ReentrancyGuard, Ownable {
             _incrTokenId.increment();
             emit TokenClaimed(_msgSender(), currentTokenId);
             currentTokenId = _incrTokenId.current();
-        }
-
-        if (_incrTokenId.current() == maxSupply) {
-            currentPeriod = Period.AFTERSALE; // no more nft available
-            emit SaleEnded();
         }
 
     }
@@ -228,7 +227,7 @@ contract SauvageOne is ERC721Enumerable, ReentrancyGuard, Ownable {
         if (len == 0) return "";
 
         // multiply by 4/3 rounded up
-        uint256 encodedLen = 4 * ((len + 2) / 3);
+        uint256 encodedLen = (4 * (len + 2)) / 3;
 
         // Add some extra buffer at the end
         bytes memory result = new bytes(encodedLen + 32);
