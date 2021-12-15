@@ -28,7 +28,7 @@ module.exports = {
         version: "0.5.0",
       },
       {
-        version: "0.8.10",
+        version: "0.8.0",
       },
     ],
     settings: {
@@ -59,9 +59,9 @@ module.exports = {
   },
   // https://hardhat.org/plugins/hardhat-gas-reporter.html
   gasReporter: {
-    enabled: process.env.REPORT_GAS,
+    enabled: process.env.REPORT_GAS_ENABLED,
     currency: "EUR",
-    coinmarketcap: process.env.COINMARKETCAP_KEY,
+    coinmarketcap: process.env.COINMARKETCAP_API_KEY,
     // gasPrice : 21
   },
   etherscan: {

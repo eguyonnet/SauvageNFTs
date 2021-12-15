@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: None
-pragma solidity 0.8.10;
+pragma solidity ^0.8.0;
 
-import "hardhat/console.sol";
+// import "hardhat/console.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -14,20 +14,21 @@ contract SauvageOne is ERC721Enumerable, ReentrancyGuard, Ownable {
 
     // Use if user does not choose id when claiming and/or if token are burnable
     using Counters for Counters.Counter;
-    Counters.Counter private _incrTokenId; 
+    Counters.Counter private _incrTokenId;
+    //uint256 private _incrTokenId; 
     // TODO update in loop cost gas (SSTORE), use normal uint (not issue with solc starting 0.8.*)
 
     // Status
-    enum Period {INIT, PRESALE, SALE, AFTERSALE}
+    enum Period {INIT, PRESALE, SALE, POSTSALE}
     Period public currentPeriod; // TODO est js with event and make this private
 
     // Total number of token mintable
     uint256 public immutable maxSupply;
 
     // Maximum number of token mintable by address 
-    uint public constant SECURITY_MAX_NBR_TOKEN_CLAIMABLE = 5; 
-    uint private _maxNbrTokenClaimable;
-
+    uint public constant SECURITY_MAX_NBR_TOKEN_CLAIMABLE = 5; // TODO make it immutable
+    uint private _maxNbrTokenClaimable; 
+    
     // Price per token
     uint256 public immutable pricePerToken;
 
@@ -35,7 +36,7 @@ contract SauvageOne is ERC721Enumerable, ReentrancyGuard, Ownable {
     mapping (address => bool) private _presaleWhiteList;
     uint private constant SECURITY_MAX_WHITELIST_ONLY_SALE_DURATION = 604800; // 7 DAYS
     uint private _whitelistSize;
-    uint public whitelistOnlySaleEndTimestamp; // end of reserved period for whitelisted addresses during sale period
+    uint public whitelistOnlySaleEndTimestamp = 0; // end of reserved period for whitelisted addresses during sale period
 
 
     // ----------------------------------------
@@ -67,36 +68,40 @@ contract SauvageOne is ERC721Enumerable, ReentrancyGuard, Ownable {
     }
 
     fallback() external payable { 
-        require(msg.data.length == 0 && msg.value >= 0, "Invalid date or value"); 
+        require(msg.data.length == 0 && msg.value > 0, "Invalid date or value"); 
         emit DepositReceived(msg.sender, msg.value); 
     }
 
-    /// @notice Mint a new token (only owner can mint before sale period and only whitelisted addresses can mint durng reserved period). Only one transaction successful per whitelisted address
+    /// @notice Mint a new token (only owner can mint before sale period and only whitelisted addresses can mint durng reserved period). 
+    ///         Each address can claim up to _maxNbrTokenClaimable
+    ///         Whitelisted address can claim once during reserved sale
     /// @dev determin if reserved period is over when needed and is sale period has to be ended (all tokens with max supply are minted)
     /// @param nbrOfTokenRequested_ Number of token claimed
     function claim(uint nbrOfTokenRequested_) external nonReentrant payable {
-        require(currentPeriod != Period.AFTERSALE, "Sale period ended");
+        require(currentPeriod != Period.POSTSALE, "Sale period ended");
         require(nbrOfTokenRequested_ > 0, "Request at least 1 token");
         if (_msgSender() != owner()) {
             require(currentPeriod == Period.SALE, "Sale period not opened");
-            if (whitelistOnlySaleEndTimestamp > 0 && whitelistOnlySaleEndTimestamp > block.timestamp) {
+            if (whitelistOnlySaleEndTimestamp > block.timestamp) {
                 require(_presaleWhiteList[_msgSender()], "Address not found in whitelist");
             }
         }
-
-        uint256 currentTokenId = _incrTokenId.current();
 
         // check number of tokens allowed (takes into account what the user already owns - he could buy in between...)
         if (_msgSender() != owner() && (balanceOf(_msgSender()) + nbrOfTokenRequested_) > _maxNbrTokenClaimable) {
             revert("Too many tokens claimed");
         }
+
+        uint256 currentTokenId = _incrTokenId.current();
+        //uint256 currentTokenId = _incrTokenId;
+
         // Check if enought tokens left
         if (currentTokenId + nbrOfTokenRequested_ > maxSupply) {
             revert("Not enough tokens left");
         }
         // If case not more supply, end sale
         if (currentTokenId + nbrOfTokenRequested_ == maxSupply) {
-            currentPeriod = Period.AFTERSALE;
+            currentPeriod = Period.POSTSALE;
             emit SaleEnded();
         }
 
@@ -110,10 +115,13 @@ contract SauvageOne is ERC721Enumerable, ReentrancyGuard, Ownable {
             _presaleWhiteList[_msgSender()] = false;
         }
 
+        //_incrTokenId += nbrOfTokenRequested_; 
+
         for (uint i = 0; i < nbrOfTokenRequested_; i++) {
+            //currentTokenId += i;
+            emit TokenClaimed(_msgSender(), currentTokenId);
             _safeMint(_msgSender(), currentTokenId);
             _incrTokenId.increment();
-            emit TokenClaimed(_msgSender(), currentTokenId);
             currentTokenId = _incrTokenId.current();
         }
 
@@ -124,13 +132,13 @@ contract SauvageOne is ERC721Enumerable, ReentrancyGuard, Ownable {
         require(to_ != address(0), "Invalid address");
         uint balance = address(this).balance;
         require(balance > 0, "No funds");
+        emit Withdrawed(to_, balance);
         (bool sent, ) = to_.call{value: balance}("");
         require(sent, "Fail to send ether");
-        emit Withdrawed(to_, balance);
     }
 
     /// @notice Start the presale process 
-    function startPresale() public onlyOwner() {
+    function startPresale() external onlyOwner() {
         require(currentPeriod == Period.INIT, "Invalid period");
         currentPeriod = Period.PRESALE;
         emit PresaleStarted();
@@ -143,7 +151,7 @@ contract SauvageOne is ERC721Enumerable, ReentrancyGuard, Ownable {
     function addToWhitelist(address[] memory addresses_) external onlyOwner returns (uint) {
         require(currentPeriod == Period.PRESALE, "Invalid period");
         require(addresses_.length <= 50, "Limit array size is 50");
-        uint count;
+        uint count = 0;
         for(uint256 i = 0; i < addresses_.length; i++) {
             if (addresses_[i] != address(0) && addresses_[i] != owner() && !_presaleWhiteList[addresses_[i]]) {
                 _presaleWhiteList[addresses_[i]] = true;
@@ -176,7 +184,7 @@ contract SauvageOne is ERC721Enumerable, ReentrancyGuard, Ownable {
     }
 
     /// @notice Start the sale process and initialize reserved period for whitelisted addresses when requested
-    function startSale(uint maxNbrTokenClaimable_, uint whitelistOnlySaleDuration_) public onlyOwner {
+    function startSale(uint maxNbrTokenClaimable_, uint whitelistOnlySaleDuration_) external onlyOwner {
         require(currentPeriod == Period.INIT || currentPeriod == Period.PRESALE, "Invalid period");
         require(maxNbrTokenClaimable_ > 0 && maxNbrTokenClaimable_< maxSupply && maxNbrTokenClaimable_ <= SECURITY_MAX_NBR_TOKEN_CLAIMABLE, "Invalid maxNbrTokenClaimable");
         if (_whitelistSize == 0) {

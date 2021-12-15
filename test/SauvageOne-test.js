@@ -131,16 +131,16 @@ describe("SauvageOne contract", function () {
         // If no whitelist then no whitelisted only period
         await expect(
           instance.startSale(maxTokensClaimable, 3600)
-        ).to.be.revertedWith("Invalid whitelistOnlySaleDuration, no whitelist");
+        ).to.be.revertedWith("Invalid duration - WHList empty");
         // If whitelist not empty then whitelisted period must exist but lower than max security
         await instance.startPresale();
         await instance.addToWhitelist([addr1.address, addr2.address]);
         await expect(
           instance.startSale(maxTokensClaimable, 0)
-        ).to.be.revertedWith("Invalid whitelistOnlySaleDuration");
+        ).to.be.revertedWith("Invalid duration - too long");
         await expect(
           instance.startSale(maxTokensClaimable, 800000)
-        ).to.be.revertedWith("Invalid whitelistOnlySaleDuration");        
+        ).to.be.revertedWith("Invalid duration - too long");        
       });
 
       it("Proper initialization of sale period without presale periode", async function () {
